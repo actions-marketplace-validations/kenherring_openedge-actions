@@ -103,6 +103,7 @@ Execute an OpenEdge source program. Automatically calls `setup` if DLC is not ye
 | `propath` | false | `.` | Initial propath, set via PROPATH environment variable |
 | `batch-mode` | false | `true` | Startup parameter -b |
 | `startup-procedure` | true | | Startup parameter -p |
+| `parameter-file` | false | | Startup parameter -pf |
 | `temp-directory` | false | `$RUNNER_TEMP` | Startup parameter -T |
 | `parameter` | false | | Startup parameter -param |
 
@@ -130,8 +131,10 @@ Execute ablunit tests. Automatically calls `setup` if DLC is not yet configured.
 | `cache-key` | false | calculated | An explicit key for a cache entry, or 'null' to disable caching |
 | `cache-token` | false | | Value added to cache key, used to forcefully expire the cache if needed |
 | `working-directory` | false | | The working directory to run the tests in |
-| `test-file-pattern` | false | `**/*.{cls,p}` | Pattern to match ABLUnit test files |
+| `test-file-pattern` | false | `*.cls,**/*.cls,*.p,**/*.p` | Pattern to match ABLUnit test files |
 | `startup-procedure` | false | `ABLUnitCore.p` | Startup parameter -p |
+| `parameter-file` | false | | Startup parameter -pf |
+| `temp-directory` | false | `$RUNNER_TEMP` | Startup parameter -T |
 | `ablunit-json` | false | `ablunit.json` | The ABLUnit configuration file, will be generated when not provided |
 
 ### Outputs: `ablunit`

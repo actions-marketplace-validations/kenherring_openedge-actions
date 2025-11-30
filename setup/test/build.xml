@@ -1,0 +1,10 @@
+<project name="setup.test">
+
+	<taskdef resource="PCT.properties" />
+	<typedef resource="types.properties" />
+
+    <target name="run">
+        <PCTRun procedure="test_message.p" />
+    </target>
+
+</project>
