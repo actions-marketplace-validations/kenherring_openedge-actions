@@ -19,6 +19,9 @@ inputs:
   cache-token:
     description: Value added to cache key, used to forcefully expire the cache if needed
     required: false
+  working-directory:
+    description: The working directory to run the tests in
+    required: false
 
   test-file-pattern:
     description: Pattern to match ABLUnit test files
@@ -52,30 +55,55 @@ runs:
   steps:
 
     - name: set-github-path
+      id: set-github-path
       shell: bash
-      run: echo '${{ github.action_path }}' >> $GITHUB_PATH
+      env:
+        ACTION_REF: ${{ github.action_ref }}
+        GITHUB_SHA: ${{ github.sha }}
+      run: |
+        echo '${{ github.action_path }}' >> "$GITHUB_PATH"
+        echo "action-ref=${ACTION_REF:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
     - id: ablunit-init
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
         ABLUNIT_JSON: ${{ inputs.ablunit-json }}
         TEST_FILE_PATTERN: ${{ inputs.test-file-pattern }}
       run: ablunit_init.sh
 
-    - uses: ./run
+    - uses: jenseng/dynamic-uses@v1.0.2
       with:
-        license: ${{ inputs.license }}
-        version: ${{ inputs.version }}
-        dlc: ${{ inputs.dlc }}
-        download-ade-source: true
-        cache-key: ${{ inputs.cache-key }}
-        propath: '$DLC/src/ablunit'
-        startup-procedure: ${{ inputs.startup-procedure }}
-        parameter: "CFG=${{ inputs.ablunit-json }}"
+        uses: kenherring/openedge-actions/run@${{ steps.set-github-path.outputs.action-ref }}
+        with: |
+          { "license": "${{ inputs.license }}",
+            "version": ${{ inputs.version }},
+            "dlc": ${{ inputs.dlc }},
+            "download-ade-source": true,
+            "cache-key": ${{ inputs.cache-key }},
+            "cache-token": ${{ inputs.cache-token }},
+            "working-directory": ${{ inputs.working-directory }},
+            "propath": "${{ inputs.propath }},$DLC/src/ablunit",
+            "startup-procedure": ${{ inputs.startup-procedure }},
+            "parameter": CFG=${{ steps.ablunit-init.outputs.ablunit-json }}
+          }
+
+    ## need to use dynamic uses above because actions local to the first action called don't work
+    # - uses: ./run
+    #   with:
+    #     license: ${{ inputs.license }}
+    #     version: ${{ inputs.version }}
+    #     dlc: ${{ inputs.dlc }}
+    #     download-ade-source: true
+    #     cache-key: ${{ inputs.cache-key }}
+    #     propath: '${{ inputs.propath }},$DLC/src/ablunit'
+    #     startup-procedure: ${{ inputs.startup-procedure }}
+    #     parameter: "CFG=${{ inputs.ablunit-json }}"
 
     - id: analyze-results
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       env:
-        ABLUNIT_JSON: ${{ inputs.ablunit-json }}
-        DELETE_ABLUNIT_JSON: ${{ steps.create-ablunit-json.outputs.created-ablunit-json }}
+        ABLUNIT_JSON: ${{ steps.ablunit-init.outputs.ablunit-json }}
+        DELETE_ABLUNIT_JSON: ${{ steps.ablunit-init.outputs.created-ablunit-json }}
       run: analyze_results.sh

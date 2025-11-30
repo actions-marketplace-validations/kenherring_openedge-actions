@@ -8,8 +8,9 @@ if [ ! -f results.xml ]; then
 fi
 
 if ! command -v xq &>/dev/null; then
-    echo "::notice file=$0::xq command not found, installing..."
+    echo "::group::xq command not found, installing..."
     sudo apt install xq
+    echo "::endgroup::"
 fi
 
 TEST_COUNT=$(xq -x /testsuites/@tests results.xml)
@@ -22,6 +23,13 @@ while IFS='' read -r LINE; do SKIPPED_COUNT=$((SKIPPED_COUNT + LINE)); done < <(
 [ "$FAILURE_COUNT" = "null" ] && FAILURE_COUNT=0
 [ "$ERROR_COUNT" = "null" ] && ERROR_COUNT=0
 [ "$SKIPPED_COUNT" = "null" ] && SKIPPED_COUNT=0
+
+
+echo "::group::results.xml"
+# shellcheck disable=SC2005
+echo "$(cat results.xml)"
+echo "::endgroup::"
+
 echo "   TEST_COUNT=$TEST_COUNT"
 echo "FAILURE_COUNT=$FAILURE_COUNT"
 echo "  ERROR_COUNT=$ERROR_COUNT"
@@ -31,7 +39,8 @@ echo "SKIPPED_COUNT=$SKIPPED_COUNT"
     echo "failure-count=$FAILURE_COUNT"
     echo "error-count=$ERROR_COUNT"
     echo "skipped-count=$SKIPPED_COUNT"
-} > "$GITHUB_OUTPUT"
+} >> "$GITHUB_OUTPUT"
+
 
 if [ "$TEST_COUNT" -eq 0 ]; then
     echo "::error file=$0::No tests executed, check your configuration..."

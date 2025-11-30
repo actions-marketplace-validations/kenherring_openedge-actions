@@ -1,0 +1,26 @@
+name: openedge-actions
+description: openedge-actions root action - setup OpenEdge with default values
+author: kenherring
+
+runs:
+  using: composite
+  steps:
+
+    - name: set-github-path
+      id: set-github-path
+      shell: bash
+      env:
+        ACTION_REF: ${{ github.action_ref }}
+        GITHUB_SHA: ${{ github.sha }}
+      run: |
+        echo '${{ github.action_path }}' >> "$GITHUB_PATH"
+        echo "action-ref=${ACTION_REF:-$GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+    - uses: jenseng/dynamic-uses@v1.0.2
+      with:
+        uses: kenherring/openedge-actions/setup@${{ steps.set-github-path.outputs.action-ref }}
+
+    ## need to use dynamic uses above because actions local to the first action called don't work
+    # - id: setup-abl
+    #   name: setup-abl
+    #   uses: ./setup

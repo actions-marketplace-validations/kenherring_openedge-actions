@@ -14,8 +14,6 @@ initialize () {
         echo "::error file=$0::Docker is not installed and is required for abl setup"
         exit 1
     fi
-
-    check-existing-dlc
 }
 
 check-existing-dlc () {
@@ -29,46 +27,24 @@ check-existing-dlc () {
                 TARGET_VERSION=$ABL_VERSION
             fi
             if [ "$EXISTING_VERSION" = "$TARGET_VERSION" ]; then
-                if [ "$DOWNLOAD_ADE_SOURCE" = 'true' ] && [ ! -f "$DLC/src/ablunit/ABLUnitCore.p" ]; then
-                    echo "::warning file=$0::DLC directory $DLC already installed, but ADE source needs to be downloaded, continuing setup..."
-                    return 0
-                fi
-                echo "::notice file=$0::DLC directory $DLC already contains the required OpenEdge version $EXISTING_VERSION. Skipping setup."
+                echo "::notice file=$0::DLC directory $DLC already contains requested OpenEdge version $EXISTING_VERSION."
                 echo "skipped=true" >> "$GITHUB_OUTPUT"
-                exit 0
+                return 0
             fi
         fi
         echo "::error file=$0::DLC directory $DLC already exists and is not empty. Please remove it or set DLC to a different location."
         exit 1
     fi
+    return 1
 }
 
 copy-dlc-from-container () {
+    check-existing-dlc && return 0
     echo "::notice file=$0::Copying DLC contents from container"
     ## copy DLC from docker container
     docker run --name setup_abl "progresssoftware/prgs-oedb:${ABL_VERSION}_ent" bash -c 'exit 0'
     docker cp setup_abl:/psc/dlc/. "$DLC"
     docker rm setup_abl >/dev/null
-}
-
-download-ade-source () {
-    [ "$DOWNLOAD_ADE_SOURCE" = 'true' ] || return 0
-    local ADE_VERSION TEMP TAR_BASENAME TAR_PATH
-    echo "::notice file=$0::Downloading progress/ADE source to $DLC/src"
-
-    ADE_VERSION="$(awk '{print $3}' "$DLC/version")"
-    [ "$(awk -F '.' '{print $3}' <<< "$ADE_VERSION")" = '' ] && ADE_VERSION="${ADE_VERSION}.0"
-    [ "$(awk -F '.' '{print $4}' <<< "$ADE_VERSION")" = '' ] && ADE_VERSION="${ADE_VERSION}.0"
-
-    TEMP=$RUNNER_TEMP
-    TAR_BASENAME="v${ADE_VERSION}.tar.gz"
-    TAR_PATH="$TEMP/$TAR_BASENAME"
-
-    if [ ! -f "$TAR_PATH" ]; then
-        curl -L -o "$TAR_PATH" "https://github.com/progress/ADE/archive/refs/tags/$TAR_BASENAME"
-    fi
-    tar --strip-components=1 -xzf "$TAR_PATH" -C "$DLC/src"
-    rm "$TAR_PATH"
 }
 
 create-configuration () {
@@ -103,11 +79,11 @@ create-configuration () {
         echo "TERM=$TERM"
         echo "WRKDIR=$WRKDIR"
     } >> "$DLC/.env"
+    cat "$DLC/.env" >> "$GITHUB_ENV"
 }
 
 ########## MAIN BLOCK ##########
 initialize
 copy-dlc-from-container
-download-ade-source
 create-configuration
 echo "::notice file=$0,title=SETUP ABL SUCCESSFUL::OpenEdge $ABL_VERSION setup at DLC=$DLC successfully"
